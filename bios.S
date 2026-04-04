@@ -20,17 +20,66 @@
 	ACIA_CTRL   = ACIA_BASE + 3
 
 
-_reset:
-_irq:
-	cld
-	sei
+acia_wait_tx:
+	php
+	plp
+	php
+	plp
+	php
+	plp
+	php
+	plp
+	php
+	plp
+	php
+	plp
+	php
+	plp
+	php
+	plp
+	php
+	plp
+	php
+	plp
+	php
+	plp
+	php
+	plp
+	php
+	plp
+	php
+	plp
+	php
+	plp
+	php
+	plp
+	php
+	plp
+	php
+	plp
+	php
+	plp
+	php
+	plp
+	php
+	plp
+	php
+	plp
+	php
+	plp
+	php
+	plp
+	rts
 
+acia_init:
 	lda #%00010000 ; 115200 baud 8N1
 	sta ACIA_CTRL
 
 	lda #%00001011 ; no parity, no IRQs, transmitter enabled
 	sta ACIA_CMD
+	rts
 
+via_init:
 	lda #$FF
 	sta VIA_DDRA
 	sta VIA_DDRB
@@ -38,11 +87,23 @@ _irq:
 	lda #$00
 	sta VIA_ORA
 	sta VIA_ORB
+	rts
 
-	lda #'X'
+_reset:
+_irq:
+	cld
+	sei
+
+	jsr acia_init
+	jsr via_init
+
+	lda #$55
 	sta ACIA_DATA
+	sta VIA_ORA
+	sta VIA_ORB
 
 loop:
+	clc
 	adc #1
 	pha
 	pha
@@ -50,61 +111,7 @@ loop:
 	sta VIA_ORA
 	sta VIA_ORB
 
-	php
-	plp
-	php
-	plp
-	php
-	plp
-
-	php
-	plp
-	php
-	plp
-	php
-	plp
-
-	php
-	plp
-	php
-	plp
-	php
-	plp
-
-	php
-	plp
-	php
-	plp
-	php
-	plp
-
-	php
-	plp
-	php
-	plp
-	php
-	plp
-
-	php
-	plp
-	php
-	plp
-	php
-	plp
-
-	php
-	plp
-	php
-	plp
-	php
-	plp
-
-	php
-	plp
-	php
-	plp
-	php
-	plp
+	jsr acia_wait_tx
 	sta ACIA_DATA
 	pla
 

@@ -131,6 +131,7 @@ ADDRESS = $F0 ; 2 bytes for address field in commands
 ADDRESS2 = $F2
 DATA = $F4 ; 1 byte for data field in write command
 TEMP = $F5 ; 2 byte temporary variable for calculations
+INPUT_LENGTH = $F7 ; 1 byte to store length of input command for validation
 
 main_loop:
 	; print the prompt
@@ -161,6 +162,10 @@ main_loop:
 @done:
 	lda #'\n'
 	jsr acia_send_byte
+
+	txa
+	dec ; adjust for the extra increment of \n
+	sta INPUT_LENGTH
 
 	; x is the length of the valid buffer
 	ldy #0 ; y will index it
@@ -310,6 +315,11 @@ parse_address_field:
 	rts
 
 cmd_help:
+	; check for correct length of command (1 for command)
+	lda INPUT_LENGTH
+	cmp #1
+	bne @print_error
+
 	ldx #0
 @loop:
 	lda help_message, x
@@ -319,8 +329,15 @@ cmd_help:
 	jmp @loop
 @done:
 	jmp main_loop
+@print_error:
+	jmp print_error
 	
 cmd_write:
+	; check for correct length of command (1 for command + 4 for address + 2 for data)
+	lda INPUT_LENGTH
+	cmp #7
+	bne @print_error
+
 	ldx #1
 	jsr parse_address_field
 
@@ -331,9 +348,19 @@ cmd_write:
 	lda DATA
 	sta (ADDRESS), y ; write the byte to the specified address
 
-	jmp cmd_read ; after writing, read back the value and print it for verification
+	; after writing, read back the value and print it for verification
+	dec INPUT_LENGTH
+	dec INPUT_LENGTH ; decrease the length so the command doesnt fail validation in cmd_read
+	jmp cmd_read
+@print_error:
+	jmp print_error
 
 cmd_read:
+	; check for correct length of command (1 for command + 4 for address)
+	lda INPUT_LENGTH
+	cmp #5
+	bne @print_error
+
 	ldx #1
 	jsr parse_address_field
 
@@ -357,17 +384,33 @@ cmd_read:
 	ldy #0
 	lda (ADDRESS), y ; read the byte from the specified address
 	jsr print_byte_as_hex ; print it as hex
+
+	lda #'\n'
+	jsr acia_send_byte
+
 	jmp main_loop
+@print_error:
+	jmp print_error
 
 cmd_boot:
+	; check for correct length of command (1 for command + 4 for address)
+	lda INPUT_LENGTH
+	cmp #5
+	bne @print_error
+
 	ldx #1
 	jsr parse_address_field
 
 	jmp (ADDRESS) ; jump to the specified address to execute code
 	jmp main_loop
 
+@print_error:
+	jmp print_error
+
 print_byte_as_hex:
     ; Use the stack instead of TEMP to avoid zero-page collisions
+	pha
+
     pha 
 
     lsr
@@ -387,9 +430,16 @@ print_byte_as_hex:
     lda hex, y
     ply
     jsr acia_send_byte
+
+	pla
     rts
 
 cmd_list:
+	; check for correct length of command (1 for command + 8 for two addresses)
+	lda INPUT_LENGTH
+	cmp #9
+	bne @print_error
+
 	; parse start address into ADDRESS
 	ldx #1
 	jsr parse_address_field
@@ -462,11 +512,28 @@ cmd_list:
 @list_done:
 	jmp main_loop
 
+@print_error:
+	jmp print_error
+
+print_error:
+	ldx #0
+@loop:
+	lda syntax_eror_message, x
+	beq @done
+	jsr acia_send_byte
+	inx
+	jmp @loop
+@done:
+	jmp main_loop
+
 boot_message:
 	.asciiz "MOLD-2 BIOS Console\nUse H for help\n"
 
 help_message:
 	.asciiz "Available commands:\nH - help\nW<address><byte> - write #<byte> to $<address>\nR<address> - read from $<address>\nB<address> - execute code at $<address>\nL<address><address> - list memory from $<address> to $<address>\n" 
+
+syntax_eror_message:
+	.asciiz "Syntax error\n"
 
 hex:
 	.asciiz "0123456789ABCDEF"

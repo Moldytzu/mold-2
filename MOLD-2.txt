@@ -1,0 +1,56 @@
+MOLD-2
+R65c02
+32 KB RAM
+16 KB IO
+16 KB ROM
+
+2 MHz => Target: 8 Mhz
+
+ROSU - +5V
+NEGRU - GND
+ALB - DECODE LOGIC
+VERDE - DATA
+GALBEN - ALTELE
+ALBASTRU - ADRESE
+
+UART
+
+GLUE LOGIC:
+RAM: $0000-$7FFF
+IO:  $8000-$DFFF
+ROM: $E000-$FFFF
+
+RAM CSb = PHI NAND NOT A15
+ROM CSb = A15 NAND A14
+IO CSb = A15 NAND NOT A14
+
+IO:
+A13 - VIA1
+A12 - ACIA1
+
+VGA
+vsync alb
+hsync gallben
+
+GLUE LOGIC:
+TEXT RAM: $8200-$82EF (A9)
+COLOR RAM: $8300-$82EF (A9 + A8) WIP
+
+Cu color ram:
+En      = (NOT IOb) AND A9
+CramCSb = En AND (NOT A8)
+TramCSb = En AND A8
+OEb     = En AND (NOT RWb)
+WEb     = En NAND (NOT RWb) 
+BEb     = En NAND PHI0
+DIR = BEb NAND OEb
+DIR -> LOW => 6502 READS, HIGH => 6502 WRITES
+
+Fara color ram:
+nIOb = NOT IOb
+nRWb = NOT RWb
+OEb = nIOb AND A9 AND nRWb
+WEb = (A9 AND PHI0 AND RWb) NAND nIOb 
+BEb = A9 NAND nIOb
+BE = NOT BE
+DIR = nRWb

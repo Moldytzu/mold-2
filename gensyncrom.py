@@ -23,6 +23,7 @@ num_v_backporch = 33
 
 # Horizontal timing measured in 16-pixel blocks
 num_h_visible = 40
+num_h_skip_visible = 8
 num_h_frontporch = 1
 num_h_sync = 6
 num_h_backporch = 3
@@ -38,12 +39,16 @@ if not vsync_polarity_pos:
     basevalue += bit_v
 if not hsync_polarity_pos:
     basevalue += bit_h
-
+#line = ([(porchvalue - bit_visible_areab) | bit_visible_area] * (num_h_skip_visible//2) + [porchvalue + bit_visible_area] * num_h_visible + [(porchvalue - bit_visible_areab) | bit_visible_area] * (num_h_skip_visible//2))
+ 
 
 def gen_line(vsync, vizibil=False, in_range_vizibil=False):
     porchvalue = basevalue ^ (bit_v if vsync else 0)
     if vizibil:
-        line = ([(porchvalue - bit_visible_areab) | bit_visible_area] * num_h_visible)
+        line = ([porchvalue] * (num_h_skip_visible//2))
+        line += (([(porchvalue - bit_visible_areab) | bit_visible_area] * (num_h_visible-num_h_skip_visible)))
+        line += ([porchvalue] * (num_h_skip_visible//2))
+        
     elif in_range_vizibil:
         line = ([porchvalue + bit_visible_area] * num_h_visible)
     else:
@@ -62,7 +67,8 @@ data.extend(num_v_sync * gen_line(True))
 data.extend(num_v_backporch * gen_line(False))
 data[-1] ^= bit_reset
 
-assert len(data) <= romsize
+print(len(data))
+assert len(data) == 26250
 
 data.extend([basevalue ^ bit_reset] * (romsize - len(data)))
 

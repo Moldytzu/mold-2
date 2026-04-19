@@ -59,6 +59,7 @@ def gen_line(vsync, vizibil=False, in_range_vizibil=False):
     return line
 
 skip_lines = (480-120*3)//2
+skip_lines = 0
 data = []
 for line in range(num_v_visible):
     data.extend(gen_line(False, (line >= skip_lines and line < num_v_visible - skip_lines), True))
